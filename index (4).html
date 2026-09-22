@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Craftbox — Creator Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --ink: #14181F;
+    --ink-soft: #262B35;
+    --paper: #F6F4EF;
+    --paper-dim: #EAE7DE;
+    --line: #DDD9CE;
+    --cobalt: #3457D5;
+    --cobalt-deep: #223B99;
+    --coral: #FF6B4A;
+    --success: #1FAA59;
+    --muted: #7C7F86;
+
+    --bg: var(--paper);
+    --bg-alt: var(--paper-dim);
+    --surface: #FFFFFF;
+    --text: var(--ink);
+    --text-muted: var(--muted);
+    --border: var(--line);
+    --accent: var(--cobalt);
+    --accent-deep: var(--cobalt-deep);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: var(--ink);
+      --bg-alt: var(--ink-soft);
+      --surface: #1C212B;
+      --text: #F1EFE9;
+      --text-muted: #9AA0AC;
+      --border: #333947;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: var(--ink);
+    --bg-alt: var(--ink-soft);
+    --surface: #1C212B;
+    --text: #F1EFE9;
+    --text-muted: #9AA0AC;
+    --border: #333947;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  ::selection { background: var(--accent); color: white; }
+
+  /* ---------- Shell ---------- */
+  .shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 232px;
+    flex-shrink: 0;
+    background: var(--bg-alt);
+    border-right: 1px solid var(--border);
+    padding: 22px 14px;
+    padding-top: calc(22px + env(safe-area-inset-top, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 8px;
+  }
+  .logo-mark {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-word { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+  .logo-sub { font-size: 11px; color: var(--text-muted); margin-top: -2px; }
+
+  nav.tools { display: flex; flex-direction: column; gap: 3px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 11px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: background .15s ease, color .15s ease;
+    user-select: none;
+  }
+  .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-item:hover { background: var(--surface); color: var(--text); }
+  .nav-item.active {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  .sidebar-foot {
+    margin-top: auto;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    padding: 10px 8px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  main.stage {
+    flex: 1;
+    min-width: 0;
+    overflow-x: hidden;
+    padding: 28px 34px 60px;
+    padding-top: calc(28px + env(safe-area-inset-top, 0px));
+  }
+
+  .stage-head { margin-bottom: 22px; }
+  .stage-head h1 { font-size: 23px; margin: 0 0 4px; font-weight: 600; letter-spacing: -0.01em; }
+  .stage-head p { margin: 0; color: var(--text-muted); font-size: 13.5px; }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) 1fr;
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .shell { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 12px 14px; gap: 14px; overflow-x: auto; }
+    .sidebar-foot { display: none; }
+    nav.tools { flex-direction: row; }
+    .panel-grid { grid-template-columns: 1fr; }
+    main.stage { padding: 20px 16px 40px; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    padding: 9px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 15px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform .1s ease, filter .15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--bg-alt); }
+  .btn-sm { padding: 6px 10px; font-size: 12.5px; border-radius: 7px; }
+  .btn svg { width: 15px; height: 15px; }
+
+  .line-item-row {
+    display: grid; grid-template-columns: 1fr 50px 70px 26px;
+    gap: 6px; margin-bottom: 7px; align-items: center;
+  }
+  .icon-x {
+    width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted);
+    background: var(--bg);
+  }
+  .icon-x:hover { color: var(--coral); border-color: var(--coral); }
+
+  .preview-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .preview-toolbar { display: flex; gap: 8px; align-self: stretch; justify-content: flex-end; }
+
+  /* Document preview (invoice / cv) */
+  .doc {
+    width: 100%; max-width: 680px;
+    background: #ffffff; color: #14181F;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 10px 30px rgba(0,0,0,.08);
+    padding: 44px 46px;
+    font-size: 13px;
+  }
+  .doc h2 { font-size: 20px; margin: 0 0 2px; }
+  .doc .muted { color: #74777E; }
+  .doc table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+  .doc th { text-align: left; font-size: 11px; text-transform: none; color: #74777E; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid #E3E0D8; }
+  .doc td { padding: 8px 0; border-bottom: 1px solid #EFEDE6; vertical-align: top; }
+  .doc .num { text-align: right; }
+  .doc .totals { margin-top: 10px; margin-left: auto; width: 220px; }
+  .doc .totals div { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .doc .totals .grand { font-weight: 700; font-size: 15px; border-top: 1px solid #E3E0D8; margin-top: 4px; padding-top: 8px; }
+  .doc .badge { display: inline-block; padding: 3px 9px; border-radius: 100px; background: #EEF1FC; color: #3457D5; font-size: 11px; font-weight: 600; }
+
+  .cv-doc .cv-head { display:flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #14181F; padding-bottom: 14px; margin-bottom: 16px;}
+  .cv-doc h2 { font-size: 24px; }
+  .cv-doc .role { color: #3457D5; font-weight: 600; font-size: 13px; margin-top: 2px;}
+  .cv-doc .contact { text-align: right; font-size: 11.5px; color: #55585F; line-height: 1.6; }
+  .cv-doc section { margin-bottom: 16px; }
+  .cv-doc section h3 { font-size: 11px; letter-spacing: .04em; color: #3457D5; margin: 0 0 8px; }
+  .cv-doc .entry { margin-bottom: 10px; }
+  .cv-doc .entry-top { display:flex; justify-content:space-between; font-weight:600; font-size:13px; }
+  .cv-doc .entry-sub { font-size: 11.5px; color: #74777E; margin-bottom: 3px; }
+  .cv-doc .entry-desc { font-size: 12.5px; color: #3B3E45; line-height: 1.5; }
+  .skill-chip { display:inline-block; background:#F2F0EA; padding:4px 10px; border-radius:6px; font-size:11.5px; margin:0 5px 5px 0; }
+
+  /* QR */
+  .qr-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 30px 10px; }
+  #qrcode { padding: 22px; background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.1); }
+  #qrcode img { display: block; }
+
+  /* Social */
+  .social-canvas-wrap { display:flex; justify-content:center; }
+  #socialCanvas { width: 100%; max-width: 420px; aspect-ratio: 1/1; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+
+  .swatches { display:flex; gap:7px; flex-wrap:wrap; }
+  .swatch { width:26px; height:26px; border-radius:7px; cursor:pointer; border:2px solid transparent; }
+  .swatch.active { border-color: var(--text); }
+
+  /* Business card */
+  .style-picker { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .style-opt {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 10px 9px;
+    cursor: pointer; text-align: left; background: var(--bg);
+  }
+  .style-opt .sp-swatch { width:100%; height:34px; border-radius:6px; margin-bottom:7px; }
+  .style-opt .sp-name { font-size: 12.5px; font-weight: 600; }
+  .style-opt .sp-desc { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+  .style-opt.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+  .card-canvas-wrap { display:flex; justify-content:center; }
+  #cardCanvas { width: 100%; max-width: 460px; aspect-ratio: 7/4; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+
+  .empty-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* entrance */
+  .app-fade { animation: appFade .5s ease both; }
+  @keyframes appFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .view { display: none; }
+  .view.active { display: block; animation: crossfade .28s ease both; }
+  @keyframes crossfade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-fade, .view.active { animation: none !important; }
+  }
+
+  input[type="color"] { padding: 2px; height: 36px; cursor: pointer; }
+  input[type="range"] { width: 100%; }
+
+  a { color: inherit; }
+</style>
+</head>
+<body>
+
+<div class="shell app-fade">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7L12 3L20 7V17L12 21L4 17V7Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 7L12 11L20 7M12 11V21" stroke="white" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="logo-word">Craftbox</div>
+        <div class="logo-sub">creator toolkit</div>
+      </div>
+    </div>
+
+    <nav class="tools">
+      <div class="nav-item active" data-view="invoice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l3 3v17H6z"/><path d="M15 2v3h3"/><path d="M9 11h6M9 14h6M9 17h4"/></svg>
+        <span>Invoice</span>
+      </div>
+      <div class="nav-item" data-view="cv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.2"/><path d="M5.5 17c.7-2.2 2.3-3.3 3.5-3.3s2.8 1.1 3.5 3.3"/><path d="M14 9h5M14 13h5"/></svg>
+        <span>CV Builder</span>
+      </div>
+      <div class="nav-item" data-view="card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.2"/><circle cx="8" cy="12" r="1.9"/><path d="M13.5 10.5h5M13.5 13.5h3.5"/></svg>
+        <span>Business Card</span>
+      </div>
+      <div class="nav-item" data-view="qr">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14h2M14 19h2M19 19h2"/></svg>
+        <span>QR Code</span>
+      </div>
+      <div class="nav-item" data-view="social">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.7"/><path d="M21 15l-5.5-5.5L4 21"/></svg>
+        <span>Social Post</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">All processing happens in your browser — nothing is uploaded.</div>
+  </aside>
+
+  <main class="stage">
+
+    <!-- INVOICE -->
+    <section class="view active" id="view-invoice">
+      <div class="stage-head">
+        <h1>Invoice Generator</h1>
+        <p>Fill in the details on the left — the invoice on the right updates as you type.</p>
+      </div>
+      <div class="panel-grid">
+        <div class="card">
+          <div class="row2">
+            <div class="field"><label>Your business</label><input id="inv-from" value="Studio Nova"/></div>
+            <div class="field"><label>Your email</label><input id="inv-fromEmail" value="hello@studionova.com"/></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Bill to</label><input id="inv-to" value="Acme Corp"/></div>
+            <div class="field"><label>Client email</label><input id="inv-toEmail" value="billing@acme.com"/></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label>Invoice #</label><input id="inv-num" value="INV-0001"/></div>
+            <div class="field"><label>Date</label><input id="inv-date" type="date"/></div>
+            <div class="field"><label>Due</label><input id="inv-due" type="date"/></div>
+          </div>
+
+          <div class="field">
+            <label>Line items</label>
+            <div id="inv-items"></div>
+            <button class="btn btn-ghost btn-sm" id="inv-add-item" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add item
+            </button>
+          </div>
+
+          <div class="row2">
+            <div class="field"><label>Tax (%)</label><input id="inv-tax" type="number" value="0" min="0"/></div>
+            <div class="field"><label>Currency</label>
+              <select id="inv-currency">
+                <option value="$">$ USD</option>
+                <option value="so'm">so'm UZS</option>
+                <option value="€">€ EUR</option>
+                <option value="₽">₽ RUB</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>Note</label><textarea id="inv-note" rows="2">Thank you for your business.</textarea></div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="preview-toolbar">
+            <button class="btn btn-ghost" id="inv-print" type="button">Print</button>
+            <button class="btn btn-primary" id="inv-pdf" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download PDF
+            </button>
+          </div>
+          <div class="doc" id="inv-doc">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <h2 id="p-from">Studio Nova</h2>
+                <div class="muted" id="p-fromEmail">hello@studionova.com</div>
+              </div>
+              <span class="badge">INVOICE</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:22px;">
+              <div>
+                <div class="muted" style="font-size:11px;">BILL TO</div>
+                <div id="p-to" style="font-weight:600;">Acme Corp</div>
+                <div class="muted" id="p-toEmail">billing@acme.com</div>
+              </div>
+              <div style="text-align:right; font-size:12px;">
+                <div><span class="muted">Invoice </span><span id="p-num">INV-0001</span></div>
+                <div><span class="muted">Date </span><span id="p-date">—</span></div>
+                <div><span class="muted">Due </span><span id="p-due">—</span></div>
+              </div>
+            </div>
+
+            <table>
+              <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+              <tbody id="p-items"></tbody>
+            </table>
+
+            <div class="totals">
+              <div><span class="muted">Subtotal</span><span id="p-subtotal">0.00</span></div>
+              <div><span class="muted">Tax</span><span id="p-taxline">0.00</span></div>
+              <div class="grand"><span>Total</span><span id="p-total">0.00</span></div>
+            </div>
+            <div class="muted" id="p-note" style="margin-top:26px; font-size:12px;">Thank you for your business.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CV -->
+    <section class="view" id="view-cv">
+      <div class="stage-head">
+        <h1>CV / Resume Builder</h1>
+        <p>Add your experience and education — export a clean, print-ready resume.</p>
+      </div>
+      <div class="panel-grid">
+        <div class="card">
+          <div class="row2">
+            <div class="field"><label>Full name</label><input id="cv-name" value="Aziza Karimova"/></div>
+            <div class="field"><label>Title</label><input id="cv-title" value="Product Designer"/></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Email</label><input id="cv-email" value="aziza@example.com"/></div>
+            <div class="field"><label>Phone</label><input id="cv-phone" value="+998 90 000 00 00"/></div>
+          </div>
+          <div class="field"><label>Location</label><input id="cv-location" value="Tashkent, Uzbekistan"/></div>
+          <div class="field"><label>Summary</label><textarea id="cv-summary" rows="3">Designer with 4+ years building clean, usable interfaces for startups and small teams.</textarea></div>
+
+          <div class="field">
+            <label>Experience</label>
+            <div id="cv-exp"></div>
+            <button class="btn btn-ghost btn-sm" id="cv-add-exp" type="button">+ Add role</button>
+          </div>
+          <div class="field">
+            <label>Education</label>
+            <div id="cv-edu"></div>
+            <button class="btn btn-ghost btn-sm" id="cv-add-edu" type="button">+ Add education</button>
+          </div>
+          <div class="field"><label>Skills (comma separated)</label><input id="cv-skills" value="Figma, Design systems, User research, HTML/CSS"/></div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="preview-toolbar">
+            <button class="btn btn-ghost" id="cv-print" type="button">Print</button>
+            <button class="btn btn-primary" id="cv-pdf" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download PDF
+            </button>
+          </div>
+          <div class="doc cv-doc" id="cv-doc">
+            <div class="cv-head">
+              <div>
+                <h2 id="cvp-name">Aziza Karimova</h2>
+                <div class="role" id="cvp-title">Product Designer</div>
+              </div>
+              <div class="contact">
+                <div id="cvp-email">aziza@example.com</div>
+                <div id="cvp-phone">+998 90 000 00 00</div>
+                <div id="cvp-location">Tashkent, Uzbekistan</div>
+              </div>
+            </div>
+            <section><p id="cvp-summary" style="margin:0; font-size:12.5px; line-height:1.55; color:#3B3E45;"></p></section>
+            <section>
+              <h3>EXPERIENCE</h3>
+              <div id="cvp-exp"></div>
+            </section>
+            <section>
+              <h3>EDUCATION</h3>
+              <div id="cvp-edu"></div>
+            </section>
+            <section>
+              <h3>SKILLS</h3>
+              <div id="cvp-skills"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUSINESS CARD -->
+    <section class="view" id="view-card">
+      <div class="stage-head">
+        <h1>Business Card</h1>
+        <p>Pick a style that matches you, fill in your details — export a print-ready card.</p>
+      </div>
+      <div class="panel-grid">
+        <div class="card">
+          <div class="row2">
+            <div class="field"><label>Full name</label><input id="bc-name" value="Jasur Tosheva"/></div>
+            <div class="field"><label>Role / title</label><input id="bc-title" value="Founder & Creative Director"/></div>
+          </div>
+          <div class="field"><label>Company</label><input id="bc-company" value="Craftbox Studio"/></div>
+          <div class="row2">
+            <div class="field"><label>Phone</label><input id="bc-phone" value="+998 90 123 45 67"/></div>
+            <div class="field"><label>Email</label><input id="bc-email" value="jasur@craftbox.studio"/></div>
+          </div>
+          <div class="field"><label>Website / social</label><input id="bc-web" value="craftbox.studio"/></div>
+
+          <div class="field">
+            <label>Style</label>
+            <div class="style-picker" id="bc-style-picker"></div>
+          </div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="preview-toolbar">
+            <button class="btn btn-primary" id="bc-pdf" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download PNG
+            </button>
+          </div>
+          <div class="card-canvas-wrap">
+            <canvas id="cardCanvas" width="1050" height="600"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QR -->
+    <section class="view" id="view-qr">
+      <div class="stage-head">
+        <h1>QR Code Generator</h1>
+        <p>Turn any link or text into a downloadable QR code.</p>
+      </div>
+      <div class="panel-grid">
+        <div class="card">
+          <div class="field"><label>Text or URL</label><textarea id="qr-text" rows="3">https://example.com</textarea></div>
+          <div class="row2">
+            <div class="field"><label>Size (px)</label>
+              <select id="qr-size"><option>200</option><option selected>280</option><option>360</option><option>480</option></select>
+            </div>
+            <div class="field"><label>Error correction</label>
+              <select id="qr-level"><option value="L">Low</option><option value="M" selected>Medium</option><option value="Q">Quartile</option><option value="H">High</option></select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Foreground</label><input type="color" id="qr-fg" value="#14181F"/></div>
+            <div class="field"><label>Background</label><input type="color" id="qr-bg" value="#ffffff"/></div>
+          </div>
+        </div>
+        <div class="qr-stage">
+          <div id="qrcode"></div>
+          <button class="btn btn-primary" id="qr-download" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+            Download PNG
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOCIAL -->
+    <section class="view" id="view-social">
+      <div class="stage-head">
+        <h1>Social Post Designer</h1>
+        <p>Quick square graphics for Instagram, Telegram or LinkedIn posts.</p>
+      </div>
+      <div class="panel-grid">
+        <div class="card">
+          <div class="field"><label>Headline</label><input id="sp-headline" value="New drop"/></div>
+          <div class="field"><label>Subtext</label><input id="sp-sub" value="Available this Friday"/></div>
+          <div class="field"><label>Background</label>
+            <div class="swatches" id="sp-bg-swatches"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Text color</label><input type="color" id="sp-textcolor" value="#ffffff"/></div>
+            <div class="field"><label>Alignment</label>
+              <select id="sp-align"><option value="left">Left</option><option value="center" selected>Center</option></select>
+            </div>
+          </div>
+          <div class="field"><label>Headline size</label><input type="range" id="sp-size" min="36" max="110" value="72"/></div>
+        </div>
+        <div class="social-canvas-wrap">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:14px; width:100%;">
+            <canvas id="socialCanvas" width="1080" height="1080"></canvas>
+            <button class="btn btn-primary" id="sp-download" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download PNG
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ---------------- Navigation ---------------- */
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('view-' + item.dataset.view).classList.add('active');
+    if (item.dataset.view === 'qr') renderQR();
+    if (item.dataset.view === 'social') renderSocial();
+    if (item.dataset.view === 'card') renderCard();
+  });
+});
+
+/* ---------------- Invoice ---------------- */
+let invItems = [
+  { desc: 'Brand identity design', qty: 1, price: 850 },
+  { desc: 'Landing page development', qty: 1, price: 1200 },
+];
+
+function renderInvItemsForm() {
+  const wrap = document.getElementById('inv-items');
+  wrap.innerHTML = '';
+  invItems.forEach((it, idx) => {
+    const row = document.createElement('div');
+    row.className = 'line-item-row';
+    row.innerHTML = `
+      <input data-idx="${idx}" data-field="desc" value="${escapeAttr(it.desc)}" placeholder="Description"/>
+      <input data-idx="${idx}" data-field="qty" type="number" min="0" value="${it.qty}"/>
+      <input data-idx="${idx}" data-field="price" type="number" min="0" value="${it.price}"/>
+      <div class="icon-x" data-remove="${idx}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx, field = e.target.dataset.field;
+      invItems[idx][field] = field === 'desc' ? e.target.value : parseFloat(e.target.value || 0);
+      renderInvoicePreview();
+    });
+  });
+  wrap.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      invItems.splice(+btn.dataset.remove, 1);
+      renderInvItemsForm();
+      renderInvoicePreview();
+    });
+  });
+}
+
+document.getElementById('inv-add-item').addEventListener('click', () => {
+  invItems.push({ desc: '', qty: 1, price: 0 });
+  renderInvItemsForm();
+  renderInvoicePreview();
+});
+
+function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+function escapeHTML(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function fmtDate(v) {
+  if (!v) return '—';
+  const d = new Date(v + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderInvoicePreview() {
+  const cur = document.getElementById('inv-currency').value;
+  document.getElementById('p-from').textContent = document.getElementById('inv-from').value || '—';
+  document.getElementById('p-fromEmail').textContent = document.getElementById('inv-fromEmail').value || '';
+  document.getElementById('p-to').textContent = document.getElementById('inv-to').value || '—';
+  document.getElementById('p-toEmail').textContent = document.getElementById('inv-toEmail').value || '';
+  document.getElementById('p-num').textContent = document.getElementById('inv-num').value || '—';
+  document.getElementById('p-date').textContent = fmtDate(document.getElementById('inv-date').value);
+  document.getElementById('p-due').textContent = fmtDate(document.getElementById('inv-due').value);
+  document.getElementById('p-note').textContent = document.getElementById('inv-note').value;
+
+  const tbody = document.getElementById('p-items');
+  tbody.innerHTML = '';
+  let subtotal = 0;
+  invItems.forEach(it => {
+    const amount = (it.qty || 0) * (it.price || 0);
+    subtotal += amount;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHTML(it.desc || '—')}</td><td class="num">${it.qty || 0}</td><td class="num">${cur}${(it.price||0).toFixed(2)}</td><td class="num">${cur}${amount.toFixed(2)}</td>`;
+    tbody.appendChild(tr);
+  });
+  const taxPct = parseFloat(document.getElementById('inv-tax').value || 0);
+  const taxAmt = subtotal * (taxPct / 100);
+  document.getElementById('p-subtotal').textContent = cur + subtotal.toFixed(2);
+  document.getElementById('p-taxline').textContent = cur + taxAmt.toFixed(2) + (taxPct ? ` (${taxPct}%)` : '');
+  document.getElementById('p-total').textContent = cur + (subtotal + taxAmt).toFixed(2);
+}
+
+document.querySelectorAll('#view-invoice input, #view-invoice select, #view-invoice textarea').forEach(el => {
+  el.addEventListener('input', renderInvoicePreview);
+});
+document.getElementById('inv-print').addEventListener('click', () => window.print());
+document.getElementById('inv-pdf').addEventListener('click', () => exportPDF('inv-doc', document.getElementById('inv-num').value || 'invoice'));
+
+function exportPDF(elId, filename) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'pt', 'a4');
+  doc.html(document.getElementById(elId), {
+    callback: d => d.save(filename.replace(/\s+/g,'_') + '.pdf'),
+    margin: [24, 24, 24, 24],
+    width: 547,
+    windowWidth: 700
+  });
+}
+
+/* ---------------- CV ---------------- */
+let cvExp = [
+  { role: 'Product Designer', company: 'Nova Studio', dates: '2022 — Present', desc: 'Leading design for a suite of B2B tools used by 40+ teams.' },
+];
+let cvEdu = [
+  { degree: 'BA, Graphic Design', school: 'National Institute of Arts', year: '2021' },
+];
+
+function renderCvExpForm() {
+  const wrap = document.getElementById('cv-exp');
+  wrap.innerHTML = '';
+  cvExp.forEach((e, idx) => {
+    const box = document.createElement('div');
+    box.className = 'card';
+    box.style.cssText = 'padding:12px; margin-bottom:8px; position:relative;';
+    box.innerHTML = `
+      <div style="position:absolute; top:8px; right:8px;" class="icon-x" data-remove-exp="${idx}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><label>Role</label><input data-exp="${idx}" data-f="role" value="${escapeAttr(e.role)}"/></div>
+        <div class="field" style="margin-bottom:8px;"><label>Company</label><input data-exp="${idx}" data-f="company" value="${escapeAttr(e.company)}"/></div>
+      </div>
+      <div class="field" style="margin-bottom:8px;"><label>Dates</label><input data-exp="${idx}" data-f="dates" value="${escapeAttr(e.dates)}"/></div>
+      <div class="field" style="margin-bottom:0;"><label>Description</label><textarea data-exp="${idx}" data-f="desc" rows="2">${escapeHTML(e.desc)}</textarea></div>
+    `;
+    wrap.appendChild(box);
+  });
+  wrap.querySelectorAll('[data-exp]').forEach(el => el.addEventListener('input', ev => {
+    cvExp[+ev.target.dataset.exp][ev.target.dataset.f] = ev.target.value;
+    renderCvPreview();
+  }));
+  wrap.querySelectorAll('[data-remove-exp]').forEach(btn => btn.addEventListener('click', () => {
+    cvExp.splice(+btn.dataset.removeExp, 1); renderCvExpForm(); renderCvPreview();
+  }));
+}
+function renderCvEduForm() {
+  const wrap = document.getElementById('cv-edu');
+  wrap.innerHTML = '';
+  cvEdu.forEach((e, idx) => {
+    const box = document.createElement('div');
+    box.className = 'card';
+    box.style.cssText = 'padding:12px; margin-bottom:8px; position:relative;';
+    box.innerHTML = `
+      <div style="position:absolute; top:8px; right:8px;" class="icon-x" data-remove-edu="${idx}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div class="field" style="margin-bottom:8px;"><label>Degree</label><input data-edu="${idx}" data-f="degree" value="${escapeAttr(e.degree)}"/></div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:0;"><label>School</label><input data-edu="${idx}" data-f="school" value="${escapeAttr(e.school)}"/></div>
+        <div class="field" style="margin-bottom:0;"><label>Year</label><input data-edu="${idx}" data-f="year" value="${escapeAttr(e.year)}"/></div>
+      </div>
+    `;
+    wrap.appendChild(box);
+  });
+  wrap.querySelectorAll('[data-edu]').forEach(el => el.addEventListener('input', ev => {
+    cvEdu[+ev.target.dataset.edu][ev.target.dataset.f] = ev.target.value;
+    renderCvPreview();
+  }));
+  wrap.querySelectorAll('[data-remove-edu]').forEach(btn => btn.addEventListener('click', () => {
+    cvEdu.splice(+btn.dataset.removeEdu, 1); renderCvEduForm(); renderCvPreview();
+  }));
+}
+document.getElementById('cv-add-exp').addEventListener('click', () => { cvExp.push({role:'',company:'',dates:'',desc:''}); renderCvExpForm(); renderCvPreview(); });
+document.getElementById('cv-add-edu').addEventListener('click', () => { cvEdu.push({degree:'',school:'',year:''}); renderCvEduForm(); renderCvPreview(); });
+
+function renderCvPreview() {
+  document.getElementById('cvp-name').textContent = document.getElementById('cv-name').value || '—';
+  document.getElementById('cvp-title').textContent = document.getElementById('cv-title').value || '';
+  document.getElementById('cvp-email').textContent = document.getElementById('cv-email').value || '';
+  document.getElementById('cvp-phone').textContent = document.getElementById('cv-phone').value || '';
+  document.getElementById('cvp-location').textContent = document.getElementById('cv-location').value || '';
+  document.getElementById('cvp-summary').textContent = document.getElementById('cv-summary').value || '';
+
+  const expWrap = document.getElementById('cvp-exp');
+  expWrap.innerHTML = cvExp.map(e => `
+    <div class="entry">
+      <div class="entry-top"><span>${escapeHTML(e.role||'')}${e.company ? ' · ' + escapeHTML(e.company) : ''}</span><span>${escapeHTML(e.dates||'')}</span></div>
+      <div class="entry-desc">${escapeHTML(e.desc||'')}</div>
+    </div>`).join('');
+
+  const eduWrap = document.getElementById('cvp-edu');
+  eduWrap.innerHTML = cvEdu.map(e => `
+    <div class="entry">
+      <div class="entry-top"><span>${escapeHTML(e.degree||'')}</span><span>${escapeHTML(e.year||'')}</span></div>
+      <div class="entry-sub">${escapeHTML(e.school||'')}</div>
+    </div>`).join('');
+
+  const skills = document.getElementById('cv-skills').value.split(',').map(s=>s.trim()).filter(Boolean);
+  document.getElementById('cvp-skills').innerHTML = skills.map(s => `<span class="skill-chip">${escapeHTML(s)}</span>`).join('');
+}
+document.querySelectorAll('#view-cv input, #view-cv textarea').forEach(el => el.addEventListener('input', renderCvPreview));
+document.getElementById('cv-print').addEventListener('click', () => window.print());
+document.getElementById('cv-pdf').addEventListener('click', () => exportPDF('cv-doc', document.getElementById('cv-name').value || 'resume'));
+
+/* ---------------- QR ---------------- */
+let qrObj = null;
+function renderQR() {
+  const el = document.getElementById('qrcode');
+  el.innerHTML = '';
+  const text = document.getElementById('qr-text').value || ' ';
+  const size = parseInt(document.getElementById('qr-size').value, 10);
+  const fg = document.getElementById('qr-fg').value;
+  const bg = document.getElementById('qr-bg').value;
+  const level = document.getElementById('qr-level').value;
+  qrObj = new QRCode(el, {
+    text, width: size, height: size,
+    colorDark: fg, colorLight: bg,
+    correctLevel: QRCode.CorrectLevel[level]
+  });
+}
+document.querySelectorAll('#view-qr input, #view-qr select, #view-qr textarea').forEach(el => el.addEventListener('input', renderQR));
+document.getElementById('qr-download').addEventListener('click', () => {
+  const img = document.querySelector('#qrcode img') || document.querySelector('#qrcode canvas');
+  const link = document.createElement('a');
+  link.download = 'qrcode.png';
+  if (img.tagName === 'CANVAS') { link.href = img.toDataURL('image/png'); }
+  else { link.href = img.src; }
+  link.click();
+});
+
+/* ---------------- Social ---------------- */
+const bgOptions = [
+  { type: 'solid', c1: '#14181F' },
+  { type: 'solid', c1: '#3457D5' },
+  { type: 'solid', c1: '#F6F4EF' },
+  { type: 'gradient', c1: '#3457D5', c2: '#223B99' },
+  { type: 'gradient', c1: '#FF6B4A', c2: '#3457D5' },
+  { type: 'gradient', c1: '#14181F', c2: '#3457D5' },
+];
+let spBgIndex = 1;
+
+function buildSwatches() {
+  const wrap = document.getElementById('sp-bg-swatches');
+  wrap.innerHTML = '';
+  bgOptions.forEach((opt, i) => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (i === spBgIndex ? ' active' : '');
+    sw.style.background = opt.type === 'solid' ? opt.c1 : `linear-gradient(135deg, ${opt.c1}, ${opt.c2})`;
+    sw.addEventListener('click', () => { spBgIndex = i; buildSwatches(); renderSocial(); });
+    wrap.appendChild(sw);
+  });
+}
+buildSwatches();
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
+  const words = text.split(' ');
+  let line = '';
+  const lines = [];
+  for (let w of words) {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w + ' '; }
+    else line = test;
+  }
+  lines.push(line);
+  const startY = y - ((lines.length - 1) * lineHeight) / 2;
+  lines.forEach((l, i) => ctx.fillText(l.trim(), x, startY + i * lineHeight));
+}
+
+function renderSocial() {
+  const canvas = document.getElementById('socialCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const opt = bgOptions[spBgIndex];
+
+  if (opt.type === 'solid') {
+    ctx.fillStyle = opt.c1;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, opt.c1);
+    g.addColorStop(1, opt.c2);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  const align = document.getElementById('sp-align').value;
+  const textColor = document.getElementById('sp-textcolor').value;
+  const headSize = parseInt(document.getElementById('sp-size').value, 10) * (W / 420);
+  const headline = document.getElementById('sp-headline').value;
+  const sub = document.getElementById('sp-sub').value;
+
+  ctx.textAlign = align === 'center' ? 'center' : 'left';
+  const x = align === 'center' ? W / 2 : W * 0.09;
+
+  ctx.fillStyle = textColor;
+  ctx.font = `600 ${headSize}px 'Space Grotesk', sans-serif`;
+  wrapText(ctx, headline, x, H * 0.46, W * 0.82, headSize * 1.08, align);
+
+  ctx.font = `400 ${headSize * 0.32}px 'IBM Plex Sans', sans-serif`;
+  ctx.globalAlpha = 0.85;
+  ctx.fillText(sub, x, H * 0.58);
+  ctx.globalAlpha = 1;
+}
+document.querySelectorAll('#view-social input, #view-social select').forEach(el => el.addEventListener('input', renderSocial));
+document.getElementById('sp-download').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'social-post.png';
+  link.href = document.getElementById('socialCanvas').toDataURL('image/png');
+  link.click();
+});
+
+/* ---------------- Business Card ---------------- */
+const cardStyles = [
+  {
+    id: 'business', name: 'Business', desc: 'Clean & corporate',
+    swatch: 'linear-gradient(135deg,#1F2E75,#3457D5)',
+    draw: drawBusinessStyle
+  },
+  {
+    id: 'sport', name: 'Sport', desc: 'Bold & dynamic',
+    swatch: 'linear-gradient(135deg,#14181F,#FF6B4A)',
+    draw: drawSportStyle
+  },
+  {
+    id: 'minimal', name: 'Minimalistic', desc: 'Quiet & precise',
+    swatch: 'linear-gradient(135deg,#F6F4EF,#DDD9CE)',
+    draw: drawMinimalStyle
+  },
+  {
+    id: 'bold', name: 'Bold', desc: 'Loud typography',
+    swatch: 'linear-gradient(135deg,#FF6B4A,#14181F)',
+    draw: drawBoldStyle
+  },
+  {
+    id: 'elegant', name: 'Elegant', desc: 'Refined & quiet luxury',
+    swatch: 'linear-gradient(135deg,#14181F,#C9A227)',
+    draw: drawElegantStyle
+  },
+];
+let bcStyleId = 'business';
+
+function buildStylePicker() {
+  const wrap = document.getElementById('bc-style-picker');
+  wrap.innerHTML = '';
+  cardStyles.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'style-opt' + (s.id === bcStyleId ? ' active' : '');
+    el.innerHTML = `<div class="sp-swatch" style="background:${s.swatch}"></div><div class="sp-name">${s.name}</div><div class="sp-desc">${s.desc}</div>`;
+    el.addEventListener('click', () => { bcStyleId = s.id; buildStylePicker(); renderCard(); });
+    wrap.appendChild(el);
+  });
+}
+
+function getCardData() {
+  return {
+    name: document.getElementById('bc-name').value || 'Your Name',
+    title: document.getElementById('bc-title').value || '',
+    company: document.getElementById('bc-company').value || '',
+    phone: document.getElementById('bc-phone').value || '',
+    email: document.getElementById('bc-email').value || '',
+    web: document.getElementById('bc-web').value || '',
+  };
+}
+
+function cardBullet(ctx, x, y, color) {
+  ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+}
+
+function drawBusinessStyle(ctx, W, H, d) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#1F2E75'); g.addColorStop(1, '#3457D5');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  // corner mark, top-right
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+  ctx.strokeRect(W - 96, 46, 40, 40);
+
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.font = '600 20px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText((d.company || 'COMPANY').toUpperCase(), 64, 76);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 58px "Space Grotesk", sans-serif';
+  ctx.fillText(d.name, 64, 300);
+
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = '500 24px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title, 64, 340);
+
+  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(64, 470); ctx.lineTo(W - 64, 470); ctx.stroke();
+
+  ctx.font = '500 19px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.9)';
+  const items = [d.phone, d.email, d.web].filter(Boolean);
+  let cx = 64;
+  items.forEach((t, i) => {
+    cardBullet(ctx, cx + 4, 514, '#FF6B4A');
+    ctx.fillText(t, cx + 18, 520);
+    cx += ctx.measureText(t).width + 60;
+  });
+}
+
+function drawSportStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#14181F'; ctx.fillRect(0, 0, W, H);
+
+  // diagonal coral swoosh
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(W * 0.42, 0); ctx.lineTo(W, 0); ctx.lineTo(W, H); ctx.lineTo(W * 0.62, H);
+  ctx.closePath(); ctx.clip();
+  const g = ctx.createLinearGradient(W * 0.4, 0, W, H);
+  g.addColorStop(0, '#FF6B4A'); g.addColorStop(1, '#E8442B');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  ctx.fillStyle = '#FF6B4A';
+  ctx.font = '700 18px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText((d.company || 'STUDIO').toUpperCase(), 60, 80);
+
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 66px "Space Grotesk", sans-serif';
+  ctx.transform(1, 0, -0.12, 1, 0, 0);
+  ctx.fillText(d.name.toUpperCase(), 60 + 40, 290);
+  ctx.restore();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 22px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title.toUpperCase(), 60, 335);
+
+  ctx.font = '500 19px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)';
+  const items = [d.phone, d.email, d.web].filter(Boolean);
+  items.forEach((t, i) => ctx.fillText(t, 60, 470 + i * 32));
+}
+
+function drawMinimalStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#F8F6F1'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#DDD9CE'; ctx.lineWidth = 1;
+  ctx.strokeRect(28, 28, W - 56, H - 56);
+
+  ctx.fillStyle = '#14181F';
+  ctx.font = '600 46px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(d.name, 70, 230);
+
+  ctx.strokeStyle = '#14181F'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(70, 258); ctx.lineTo(190, 258); ctx.stroke();
+
+  ctx.fillStyle = '#55585F';
+  ctx.font = '500 20px "IBM Plex Sans", sans-serif';
+  const roleLine = [d.title, d.company].filter(Boolean).join('  —  ');
+  ctx.fillText(roleLine, 70, 296);
+
+  ctx.font = '400 18px "IBM Plex Mono", monospace'; ctx.fillStyle = '#3B3E45';
+  const items = [d.phone, d.email, d.web].filter(Boolean);
+  items.forEach((t, i) => ctx.fillText(t, 70, 470 + i * 30));
+}
+
+function drawBoldStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#FF6B4A'; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#14181F';
+  ctx.font = '700 100px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'left';
+  const first = (d.name.split(' ')[0] || d.name);
+  ctx.fillText(first, -6, 230);
+  const rest = d.name.split(' ').slice(1).join(' ');
+  if (rest) ctx.fillText(rest, -6, 320);
+
+  ctx.fillStyle = '#14181F';
+  ctx.fillRect(60, H - 150, 300, 46);
+  ctx.fillStyle = '#FF6B4A';
+  ctx.font = '700 20px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title.toUpperCase(), 76, H - 118);
+
+  ctx.fillStyle = '#14181F';
+  ctx.font = '600 19px "IBM Plex Sans", sans-serif';
+  const items = [d.company, d.phone, d.email, d.web].filter(Boolean);
+  items.forEach((t, i) => ctx.fillText(t, 60 + i * 0, H - 70 + (i > 1 ? 0 : 0)));
+  // stack contact bottom-right instead for balance
+  ctx.textAlign = 'right';
+  let ly = H - 96;
+  [d.phone, d.email, d.web].filter(Boolean).forEach(t => { ctx.fillText(t, W - 60, ly); ly += 26; });
+}
+
+function drawElegantStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#14181F'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#C9A227'; ctx.lineWidth = 1.2;
+  ctx.strokeRect(36, 36, W - 72, H - 72);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#C9A227';
+  ctx.font = '500 16px "IBM Plex Mono", monospace';
+  ctx.fillText((d.company || '').toUpperCase(), W / 2, 130);
+
+  ctx.fillStyle = '#F1EFE9';
+  ctx.font = '600 50px "Space Grotesk", sans-serif';
+  ctx.fillText(d.name, W / 2, 280);
+
+  ctx.strokeStyle = '#C9A227'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(W/2 - 60, 306); ctx.lineTo(W/2 + 60, 306); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(241,239,233,.75)';
+  ctx.font = '400 20px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title, W / 2, 342);
+
+  ctx.font = '400 17px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(241,239,233,.6)';
+  const items = [d.phone, d.email, d.web].filter(Boolean).join('      ');
+  ctx.fillText(items, W / 2, 500);
+  ctx.textAlign = 'left';
+}
+
+function renderCard() {
+  const canvas = document.getElementById('cardCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const style = cardStyles.find(s => s.id === bcStyleId) || cardStyles[0];
+  style.draw(ctx, W, H, getCardData());
+}
+document.querySelectorAll('#view-card input').forEach(el => el.addEventListener('input', renderCard));
+document.getElementById('bc-pdf').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'business-card.png';
+  link.href = document.getElementById('cardCanvas').toDataURL('image/png');
+  link.click();
+});
+buildStylePicker();
+
+/* ---------------- Init ---------------- */
+renderInvItemsForm();
+renderInvoicePreview();
+renderCvExpForm();
+renderCvEduForm();
+renderCvPreview();
+window.addEventListener('load', () => { renderQR(); renderSocial(); renderCard(); });
+document.getElementById('inv-date').valueAsDate = new Date();
+const due = new Date(); due.setDate(due.getDate() + 14);
+document.getElementById('inv-due').valueAsDate = due;
+renderInvoicePreview();
+</script>
+</body>
+</html>
