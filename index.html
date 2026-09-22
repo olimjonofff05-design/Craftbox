@@ -273,6 +273,20 @@
   .swatch { width:26px; height:26px; border-radius:7px; cursor:pointer; border:2px solid transparent; }
   .swatch.active { border-color: var(--text); }
 
+  /* Business card */
+  .style-picker { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .style-opt {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 10px 9px;
+    cursor: pointer; text-align: left; background: var(--bg);
+  }
+  .style-opt .sp-swatch { width:100%; height:34px; border-radius:6px; margin-bottom:7px; }
+  .style-opt .sp-name { font-size: 12.5px; font-weight: 600; }
+  .style-opt .sp-desc { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+  .style-opt.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+  .card-canvas-wrap { display:flex; justify-content:center; }
+  #cardCanvas { width: 100%; max-width: 460px; aspect-ratio: 7/4; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+
   .empty-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
   /* entrance */
@@ -314,6 +328,10 @@
       <div class="nav-item" data-view="cv">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.2"/><path d="M5.5 17c.7-2.2 2.3-3.3 3.5-3.3s2.8 1.1 3.5 3.3"/><path d="M14 9h5M14 13h5"/></svg>
         <span>CV Builder</span>
+      </div>
+      <div class="nav-item" data-view="card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.2"/><circle cx="8" cy="12" r="1.9"/><path d="M13.5 10.5h5M13.5 13.5h3.5"/></svg>
+        <span>Business Card</span>
       </div>
       <div class="nav-item" data-view="qr">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14h2M14 19h2M19 19h2"/></svg>
@@ -490,6 +508,45 @@
       </div>
     </section>
 
+    <!-- BUSINESS CARD -->
+    <section class="view" id="view-card">
+      <div class="stage-head">
+        <h1>Business Card</h1>
+        <p>Pick a style that matches you, fill in your details — export a print-ready card.</p>
+      </div>
+      <div class="panel-grid">
+        <div class="card">
+          <div class="row2">
+            <div class="field"><label>Full name</label><input id="bc-name" value="Jasur Tosheva"/></div>
+            <div class="field"><label>Role / title</label><input id="bc-title" value="Founder & Creative Director"/></div>
+          </div>
+          <div class="field"><label>Company</label><input id="bc-company" value="Craftbox Studio"/></div>
+          <div class="row2">
+            <div class="field"><label>Phone</label><input id="bc-phone" value="+998 90 123 45 67"/></div>
+            <div class="field"><label>Email</label><input id="bc-email" value="jasur@craftbox.studio"/></div>
+          </div>
+          <div class="field"><label>Website / social</label><input id="bc-web" value="craftbox.studio"/></div>
+
+          <div class="field">
+            <label>Style</label>
+            <div class="style-picker" id="bc-style-picker"></div>
+          </div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="preview-toolbar">
+            <button class="btn btn-primary" id="bc-pdf" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download PNG
+            </button>
+          </div>
+          <div class="card-canvas-wrap">
+            <canvas id="cardCanvas" width="1050" height="600"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- QR -->
     <section class="view" id="view-qr">
       <div class="stage-head">
@@ -568,6 +625,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.getElementById('view-' + item.dataset.view).classList.add('active');
     if (item.dataset.view === 'qr') renderQR();
     if (item.dataset.view === 'social') renderSocial();
+    if (item.dataset.view === 'card') renderCard();
   });
 });
 
@@ -870,13 +928,233 @@ document.getElementById('sp-download').addEventListener('click', () => {
   link.click();
 });
 
+/* ---------------- Business Card ---------------- */
+const cardStyles = [
+  {
+    id: 'business', name: 'Business', desc: 'Clean & corporate',
+    swatch: 'linear-gradient(135deg,#1F2E75,#3457D5)',
+    draw: drawBusinessStyle
+  },
+  {
+    id: 'sport', name: 'Sport', desc: 'Bold & dynamic',
+    swatch: 'linear-gradient(135deg,#14181F,#FF6B4A)',
+    draw: drawSportStyle
+  },
+  {
+    id: 'minimal', name: 'Minimalistic', desc: 'Quiet & precise',
+    swatch: 'linear-gradient(135deg,#F6F4EF,#DDD9CE)',
+    draw: drawMinimalStyle
+  },
+  {
+    id: 'bold', name: 'Bold', desc: 'Loud typography',
+    swatch: 'linear-gradient(135deg,#FF6B4A,#14181F)',
+    draw: drawBoldStyle
+  },
+  {
+    id: 'elegant', name: 'Elegant', desc: 'Refined & quiet luxury',
+    swatch: 'linear-gradient(135deg,#14181F,#C9A227)',
+    draw: drawElegantStyle
+  },
+];
+let bcStyleId = 'business';
+
+function buildStylePicker() {
+  const wrap = document.getElementById('bc-style-picker');
+  wrap.innerHTML = '';
+  cardStyles.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'style-opt' + (s.id === bcStyleId ? ' active' : '');
+    el.innerHTML = `<div class="sp-swatch" style="background:${s.swatch}"></div><div class="sp-name">${s.name}</div><div class="sp-desc">${s.desc}</div>`;
+    el.addEventListener('click', () => { bcStyleId = s.id; buildStylePicker(); renderCard(); });
+    wrap.appendChild(el);
+  });
+}
+
+function getCardData() {
+  return {
+    name: document.getElementById('bc-name').value || 'Your Name',
+    title: document.getElementById('bc-title').value || '',
+    company: document.getElementById('bc-company').value || '',
+    phone: document.getElementById('bc-phone').value || '',
+    email: document.getElementById('bc-email').value || '',
+    web: document.getElementById('bc-web').value || '',
+  };
+}
+
+function cardBullet(ctx, x, y, color) {
+  ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+}
+
+function drawBusinessStyle(ctx, W, H, d) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#1F2E75'); g.addColorStop(1, '#3457D5');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  // corner mark, top-right
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+  ctx.strokeRect(W - 96, 46, 40, 40);
+
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.font = '600 20px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText((d.company || 'COMPANY').toUpperCase(), 64, 76);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 58px "Space Grotesk", sans-serif';
+  ctx.fillText(d.name, 64, 300);
+
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = '500 24px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title, 64, 340);
+
+  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(64, 470); ctx.lineTo(W - 64, 470); ctx.stroke();
+
+  ctx.font = '500 19px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.9)';
+  const items = [d.phone, d.email, d.web].filter(Boolean);
+  let cx = 64;
+  items.forEach((t, i) => {
+    cardBullet(ctx, cx + 4, 514, '#FF6B4A');
+    ctx.fillText(t, cx + 18, 520);
+    cx += ctx.measureText(t).width + 60;
+  });
+}
+
+function drawSportStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#14181F'; ctx.fillRect(0, 0, W, H);
+
+  // diagonal coral swoosh
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(W * 0.42, 0); ctx.lineTo(W, 0); ctx.lineTo(W, H); ctx.lineTo(W * 0.62, H);
+  ctx.closePath(); ctx.clip();
+  const g = ctx.createLinearGradient(W * 0.4, 0, W, H);
+  g.addColorStop(0, '#FF6B4A'); g.addColorStop(1, '#E8442B');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  ctx.fillStyle = '#FF6B4A';
+  ctx.font = '700 18px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText((d.company || 'STUDIO').toUpperCase(), 60, 80);
+
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 66px "Space Grotesk", sans-serif';
+  ctx.transform(1, 0, -0.12, 1, 0, 0);
+  ctx.fillText(d.name.toUpperCase(), 60 + 40, 290);
+  ctx.restore();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 22px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title.toUpperCase(), 60, 335);
+
+  ctx.font = '500 19px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)';
+  const items = [d.phone, d.email, d.web].filter(Boolean);
+  items.forEach((t, i) => ctx.fillText(t, 60, 470 + i * 32));
+}
+
+function drawMinimalStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#F8F6F1'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#DDD9CE'; ctx.lineWidth = 1;
+  ctx.strokeRect(28, 28, W - 56, H - 56);
+
+  ctx.fillStyle = '#14181F';
+  ctx.font = '600 46px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(d.name, 70, 230);
+
+  ctx.strokeStyle = '#14181F'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(70, 258); ctx.lineTo(190, 258); ctx.stroke();
+
+  ctx.fillStyle = '#55585F';
+  ctx.font = '500 20px "IBM Plex Sans", sans-serif';
+  const roleLine = [d.title, d.company].filter(Boolean).join('  —  ');
+  ctx.fillText(roleLine, 70, 296);
+
+  ctx.font = '400 18px "IBM Plex Mono", monospace'; ctx.fillStyle = '#3B3E45';
+  const items = [d.phone, d.email, d.web].filter(Boolean);
+  items.forEach((t, i) => ctx.fillText(t, 70, 470 + i * 30));
+}
+
+function drawBoldStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#FF6B4A'; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#14181F';
+  ctx.font = '700 100px "Space Grotesk", sans-serif';
+  ctx.textAlign = 'left';
+  const first = (d.name.split(' ')[0] || d.name);
+  ctx.fillText(first, -6, 230);
+  const rest = d.name.split(' ').slice(1).join(' ');
+  if (rest) ctx.fillText(rest, -6, 320);
+
+  ctx.fillStyle = '#14181F';
+  ctx.fillRect(60, H - 150, 300, 46);
+  ctx.fillStyle = '#FF6B4A';
+  ctx.font = '700 20px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title.toUpperCase(), 76, H - 118);
+
+  ctx.fillStyle = '#14181F';
+  ctx.font = '600 19px "IBM Plex Sans", sans-serif';
+  const items = [d.company, d.phone, d.email, d.web].filter(Boolean);
+  items.forEach((t, i) => ctx.fillText(t, 60 + i * 0, H - 70 + (i > 1 ? 0 : 0)));
+  // stack contact bottom-right instead for balance
+  ctx.textAlign = 'right';
+  let ly = H - 96;
+  [d.phone, d.email, d.web].filter(Boolean).forEach(t => { ctx.fillText(t, W - 60, ly); ly += 26; });
+}
+
+function drawElegantStyle(ctx, W, H, d) {
+  ctx.fillStyle = '#14181F'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#C9A227'; ctx.lineWidth = 1.2;
+  ctx.strokeRect(36, 36, W - 72, H - 72);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#C9A227';
+  ctx.font = '500 16px "IBM Plex Mono", monospace';
+  ctx.fillText((d.company || '').toUpperCase(), W / 2, 130);
+
+  ctx.fillStyle = '#F1EFE9';
+  ctx.font = '600 50px "Space Grotesk", sans-serif';
+  ctx.fillText(d.name, W / 2, 280);
+
+  ctx.strokeStyle = '#C9A227'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(W/2 - 60, 306); ctx.lineTo(W/2 + 60, 306); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(241,239,233,.75)';
+  ctx.font = '400 20px "IBM Plex Sans", sans-serif';
+  ctx.fillText(d.title, W / 2, 342);
+
+  ctx.font = '400 17px "IBM Plex Sans", sans-serif'; ctx.fillStyle = 'rgba(241,239,233,.6)';
+  const items = [d.phone, d.email, d.web].filter(Boolean).join('      ');
+  ctx.fillText(items, W / 2, 500);
+  ctx.textAlign = 'left';
+}
+
+function renderCard() {
+  const canvas = document.getElementById('cardCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const style = cardStyles.find(s => s.id === bcStyleId) || cardStyles[0];
+  style.draw(ctx, W, H, getCardData());
+}
+document.querySelectorAll('#view-card input').forEach(el => el.addEventListener('input', renderCard));
+document.getElementById('bc-pdf').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'business-card.png';
+  link.href = document.getElementById('cardCanvas').toDataURL('image/png');
+  link.click();
+});
+buildStylePicker();
+
 /* ---------------- Init ---------------- */
 renderInvItemsForm();
 renderInvoicePreview();
 renderCvExpForm();
 renderCvEduForm();
 renderCvPreview();
-window.addEventListener('load', () => { renderQR(); renderSocial(); });
+window.addEventListener('load', () => { renderQR(); renderSocial(); renderCard(); });
 document.getElementById('inv-date').valueAsDate = new Date();
 const due = new Date(); due.setDate(due.getDate() + 14);
 document.getElementById('inv-due').valueAsDate = due;
